@@ -5,10 +5,11 @@ from pathlib import Path
 
 
 class Database:
-    """Async SQLite store. Each operation owns its connection and transaction."""
+    """Async SQLite persistence. Existing player and market data are preserved."""
 
     def __init__(self, path: str):
         self.path = path
+        self._anchor = None
         if path != ":memory:":
             Path(path).expanduser().parent.mkdir(parents=True, exist_ok=True)
 
@@ -22,81 +23,82 @@ class Database:
         return db
 
     async def initialize(self):
+        # A persistent shared-memory connection makes :memory: useful in tests.
+        if self.path == ":memory:" and self._anchor is None:
+            self._anchor = await aiosqlite.connect("file:rpg-shared?mode=memory&cache=shared", uri=True)
+            self.path = "file:rpg-shared?mode=memory&cache=shared"
         db = await self.connect()
         try:
             await db.executescript("""
             CREATE TABLE IF NOT EXISTS players(
               telegram_id INTEGER PRIMARY KEY, username TEXT, display_name TEXT NOT NULL,
               coins INTEGER NOT NULL DEFAULT 100 CHECK(coins>=0), level INTEGER NOT NULL DEFAULT 1 CHECK(level>=1),
-              xp INTEGER NOT NULL DEFAULT 0 CHECK(xp>=0), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+              xp INTEGER NOT NULL DEFAULT 0 CHECK(xp>=0), gems INTEGER NOT NULL DEFAULT 0 CHECK(gems>=0),
+              energy INTEGER NOT NULL DEFAULT 100 CHECK(energy>=0), max_energy INTEGER NOT NULL DEFAULT 100 CHECK(max_energy>=1),
+              active_character TEXT NOT NULL DEFAULT 'goku', region TEXT NOT NULL DEFAULT 'earth',
+              daily_streak INTEGER NOT NULL DEFAULT 0, last_daily TEXT, banned INTEGER NOT NULL DEFAULT 0,
+              explores INTEGER NOT NULL DEFAULT 0, pve_wins INTEGER NOT NULL DEFAULT 0, pvp_wins INTEGER NOT NULL DEFAULT 0,
+              str_stat INTEGER NOT NULL DEFAULT 5, agi_stat INTEGER NOT NULL DEFAULT 5, int_stat INTEGER NOT NULL DEFAULT 5,
+              vit_stat INTEGER NOT NULL DEFAULT 5, luk_stat INTEGER NOT NULL DEFAULT 5,
+              stat_points INTEGER NOT NULL DEFAULT 0, title TEXT NOT NULL DEFAULT '',
+              settings_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE IF NOT EXISTS market_meta(singleton INTEGER PRIMARY KEY CHECK(singleton=1),cycle INTEGER NOT NULL);
-            CREATE TABLE IF NOT EXISTS market_assets(
-              asset_id TEXT PRIMARY KEY,name TEXT NOT NULL,emoji TEXT NOT NULL,description TEXT NOT NULL,
-              base_price INTEGER NOT NULL,min_price INTEGER NOT NULL,max_price INTEGER NOT NULL,
-              price INTEGER NOT NULL,change_pct REAL NOT NULL DEFAULT 0,stock INTEGER NOT NULL,
-              daily_stock INTEGER NOT NULL,stock_day TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS market_positions(
-              player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,
-              asset_id TEXT NOT NULL REFERENCES market_assets(asset_id),quantity INTEGER NOT NULL CHECK(quantity>=0),
-              avg_cost REAL NOT NULL CHECK(avg_cost>=0),PRIMARY KEY(player_id,asset_id));
-            CREATE TABLE IF NOT EXISTS market_transactions(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,player_id INTEGER NOT NULL REFERENCES players(telegram_id),
-              asset_id TEXT NOT NULL REFERENCES market_assets(asset_id),side TEXT NOT NULL CHECK(side IN ('buy','sell')),
-              quantity INTEGER NOT NULL,unit_price INTEGER NOT NULL,fee INTEGER NOT NULL,realized_profit INTEGER NOT NULL DEFAULT 0,
-              created_at INTEGER NOT NULL);
-            CREATE INDEX IF NOT EXISTS idx_market_transactions_player ON market_transactions(player_id,id DESC);
-            CREATE TABLE IF NOT EXISTS active_battles(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,
-              enemy TEXT NOT NULL,enemy_hp INTEGER NOT NULL,player_hp INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'active',turn INTEGER NOT NULL DEFAULT 0);
-            CREATE TABLE IF NOT EXISTS custom_art(
-              entity_key TEXT PRIMARY KEY,file_id TEXT NOT NULL,uploaded_by INTEGER NOT NULL,updated_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS market_assets(asset_id TEXT PRIMARY KEY,name TEXT NOT NULL,emoji TEXT NOT NULL,description TEXT NOT NULL,base_price INTEGER NOT NULL,min_price INTEGER NOT NULL,max_price INTEGER NOT NULL,price INTEGER NOT NULL,change_pct REAL NOT NULL DEFAULT 0,stock INTEGER NOT NULL,daily_stock INTEGER NOT NULL,stock_day TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS market_positions(player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,asset_id TEXT NOT NULL REFERENCES market_assets(asset_id),quantity INTEGER NOT NULL CHECK(quantity>=0),avg_cost REAL NOT NULL CHECK(avg_cost>=0),PRIMARY KEY(player_id,asset_id));
+            CREATE TABLE IF NOT EXISTS market_transactions(id INTEGER PRIMARY KEY AUTOINCREMENT,player_id INTEGER NOT NULL REFERENCES players(telegram_id),asset_id TEXT NOT NULL REFERENCES market_assets(asset_id),side TEXT NOT NULL CHECK(side IN ('buy','sell')),quantity INTEGER NOT NULL,unit_price INTEGER NOT NULL,fee INTEGER NOT NULL,realized_profit INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS owned_characters(player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,character_id TEXT NOT NULL,level INTEGER NOT NULL DEFAULT 1,shards INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(player_id,character_id));
+            CREATE TABLE IF NOT EXISTS owned_items(player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,item_id TEXT NOT NULL,quantity INTEGER NOT NULL DEFAULT 0 CHECK(quantity>=0),enhancement INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(player_id,item_id));
+            CREATE TABLE IF NOT EXISTS owned_skills(player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,skill_id TEXT NOT NULL,slot INTEGER,PRIMARY KEY(player_id,skill_id));
+            CREATE TABLE IF NOT EXISTS owned_pets(player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,pet_id TEXT NOT NULL,level INTEGER NOT NULL DEFAULT 1,equipped INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(player_id,pet_id));
+            CREATE TABLE IF NOT EXISTS clans(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE COLLATE NOCASE,leader_id INTEGER NOT NULL REFERENCES players(telegram_id),treasury INTEGER NOT NULL DEFAULT 0,xp INTEGER NOT NULL DEFAULT 0,level INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+            CREATE TABLE IF NOT EXISTS clan_members(player_id INTEGER PRIMARY KEY REFERENCES players(telegram_id) ON DELETE CASCADE,clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('leader','officer','member')));
+            CREATE TABLE IF NOT EXISTS clan_raids(id INTEGER PRIMARY KEY AUTOINCREMENT,clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,boss TEXT NOT NULL,hp INTEGER NOT NULL,max_hp INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'active',started_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS active_battles(id INTEGER PRIMARY KEY AUTOINCREMENT,player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,kind TEXT NOT NULL,enemy TEXT NOT NULL,enemy_hp INTEGER NOT NULL,enemy_max_hp INTEGER NOT NULL,player_hp INTEGER NOT NULL,player_max_hp INTEGER NOT NULL,mp INTEGER NOT NULL DEFAULT 100,ult INTEGER NOT NULL DEFAULT 0,transformed INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'active',turn INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS custom_art(entity_key TEXT PRIMARY KEY,file_id TEXT NOT NULL,uploaded_by INTEGER NOT NULL,updated_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS player_quests(player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,day TEXT NOT NULL,quest_id TEXT NOT NULL,progress INTEGER NOT NULL DEFAULT 0,claimed INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(player_id,day,quest_id));
+            CREATE TABLE IF NOT EXISTS dragon_balls(player_id INTEGER NOT NULL REFERENCES players(telegram_id) ON DELETE CASCADE,star INTEGER NOT NULL,quantity INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(player_id,star));
+            CREATE TABLE IF NOT EXISTS market_listings(id INTEGER PRIMARY KEY AUTOINCREMENT,seller_id INTEGER NOT NULL REFERENCES players(telegram_id),item_id TEXT NOT NULL,quantity INTEGER NOT NULL,price INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'active',created_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS audit_log(id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL,action TEXT NOT NULL,target_id INTEGER,details TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL);
+            CREATE INDEX IF NOT EXISTS idx_players_rank ON players(level DESC,xp DESC);
+            CREATE INDEX IF NOT EXISTS idx_clan_members_clan ON clan_members(clan_id);
+            CREATE INDEX IF NOT EXISTS idx_market_listings_status ON market_listings(status,id DESC);
+            CREATE INDEX IF NOT EXISTS idx_battles_player ON active_battles(player_id,status);
             """)
+            # Non-destructive schema additions for databases created by earlier versions.
+            cur = await db.execute("PRAGMA table_info(players)")
+            existing = {r["name"] for r in await cur.fetchall()}
+            additions = {
+                "gems": "INTEGER NOT NULL DEFAULT 0", "energy": "INTEGER NOT NULL DEFAULT 100",
+                "max_energy": "INTEGER NOT NULL DEFAULT 100", "active_character": "TEXT NOT NULL DEFAULT 'goku'",
+                "region": "TEXT NOT NULL DEFAULT 'earth'", "daily_streak": "INTEGER NOT NULL DEFAULT 0",
+                "last_daily": "TEXT", "banned": "INTEGER NOT NULL DEFAULT 0", "explores": "INTEGER NOT NULL DEFAULT 0",
+                "pve_wins": "INTEGER NOT NULL DEFAULT 0", "pvp_wins": "INTEGER NOT NULL DEFAULT 0",
+                "str_stat": "INTEGER NOT NULL DEFAULT 5", "agi_stat": "INTEGER NOT NULL DEFAULT 5",
+                "int_stat": "INTEGER NOT NULL DEFAULT 5", "vit_stat": "INTEGER NOT NULL DEFAULT 5",
+                "luk_stat": "INTEGER NOT NULL DEFAULT 5", "stat_points": "INTEGER NOT NULL DEFAULT 0",
+                "title": "TEXT NOT NULL DEFAULT ''", "settings_json": "TEXT NOT NULL DEFAULT '{}'",
+            }
+            for col, definition in additions.items():
+                if col not in existing:
+                    await db.execute(f"ALTER TABLE players ADD COLUMN {col} {definition}")
             await db.commit()
-            await seed_assets(db)
+            await self._seed_market(db)
         finally:
             await db.close()
 
-
-ASSETS = (
-    ("senzu_futures","Senzu Bean Co.","🌱","Senzu beans and recovery supplies",120,55,260,1200),
-    ("capsule_corp","Capsule Corp.","📦","Capsule technology and travel gear",220,100,480,950),
-    ("ki_crystals","Ki Crystal Mine","💎","Refined ki crystals for training",175,70,400,1400),
-    ("dragon_radar","Dragon Radar Works","📡","Navigation equipment for dragon-ball hunters",320,150,750,700),
-    ("namek_orbs","Namekian Orb Exchange","🐉","Rare Namekian collectibles",950,420,2200,360),
-    ("saiyan_armor","Saiyan Armor Foundry","🛡️","Battle armor from the Saiyan frontier",540,240,1250,520),
-    ("gravity_gym","Gravity Room Labs","🪐","High-gravity training equipment",410,180,900,600),
-    ("scouter_tech","Scouter Systems","🔴","Power-level detection technology",280,120,650,820),
-    ("kai_gardens","Kai Planet Gardens","🌿","Medicinal herbs from the Other World",360,160,800,640),
-    ("fusion_arts","Metamoran Arts","💫","Fusion technique scrolls and accessories",780,330,1750,390),
-    ("potara_gems","Potara Gem Trust","💠","Collector-grade Potara artifacts",1250,550,2900,280),
-    ("android_parts","Red Ribbon Salvage","⚙️","Reclaimed android components",245,100,580,900),
-    ("dino_meat","Dino Ranchers","🍖","Food supplies for expeditions",85,35,190,1600),
-    ("space_freight","Galactic Freight","🚀","Interplanetary shipping and logistics",305,135,690,760),
-    ("frieza_metal","Frieza Force Metals","🧊","Durable alloys from old empire foundries",470,200,1050,580),
-    ("kaioken_scrolls","Kaioken Dojo","📜","Advanced martial arts instruction",625,275,1400,460),
-    ("spirit_energy","Spirit Energy Co-op","☀️","Community-backed energy projects",860,380,1950,340),
-    ("beerus_dessert","Beerus Dessert House","🍮","Premium sweets with unpredictable demand",195,70,500,880),
-    ("world_tournament","World Tournament Group","🏆","Event venue and broadcast rights",390,170,880,660),
-    ("time_chamber","Time Chamber Holdings","⌛","Scarce temporal training contracts",1650,720,3800,220),
-)
-
-
-async def seed_assets(db):
-    import time
-    from datetime import UTC, datetime
-    cycle = int(time.time()) // 300
-    day = datetime.now(UTC).date().isoformat()
-    await db.execute("BEGIN IMMEDIATE")
-    try:
-        await db.execute("INSERT OR IGNORE INTO market_meta(singleton,cycle) VALUES(1,?)", (cycle,))
+    async def _seed_market(self, db):
+        from .market_service import ASSETS
+        import time
+        from datetime import UTC, datetime
+        cycle=int(time.time())//300
+        day=datetime.now(UTC).date().isoformat()
+        await db.execute("INSERT OR IGNORE INTO market_meta(singleton,cycle) VALUES(1,?)",(cycle,))
         for asset in ASSETS:
             asset_id,name,emoji,description,base,low,high,stock=asset
-            await db.execute("INSERT OR IGNORE INTO market_assets(asset_id,name,emoji,description,base_price,min_price,max_price,price,stock,daily_stock,stock_day) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                             (asset_id,name,emoji,description,base,low,high,base,stock,stock,day))
+            await db.execute("INSERT OR IGNORE INTO market_assets(asset_id,name,emoji,description,base_price,min_price,max_price,price,stock,daily_stock,stock_day) VALUES(?,?,?,?,?,?,?,?,?,?,?)",(asset_id,name,emoji,description,base,low,high,base,stock,stock,day))
         await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
 
     async def close(self):
-        return None
+        if self._anchor is not None:
+            await self._anchor.close()
+            self._anchor=None
