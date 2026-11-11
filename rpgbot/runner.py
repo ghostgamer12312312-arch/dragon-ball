@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import logging
 
-from .add_content import initialize_content, register as register_add
-from .config import load_settings
-from .database import Database
-from .main import build_application
+from .expansion import register_expansion
 
 
 def main():
+    from .config import load_settings
+    from .database import Database
+    from .main import build_application
+    from .add_content import initialize_content, register as register_add
+
     settings = load_settings()
     logging.basicConfig(level=getattr(logging, settings.log_level, logging.INFO), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     db = Database(settings.database_path)
@@ -19,6 +21,7 @@ def main():
     app.bot_data["settings"] = settings
     app.bot_data["db"] = db
     register_add(app)
+    register_expansion(app)
     logging.getLogger(__name__).info("Starting Dragon Ball RPG polling")
     app.run_polling()
 
