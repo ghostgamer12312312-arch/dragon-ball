@@ -98,11 +98,8 @@ ENEMIES = [
 RARITY_ICONS = {5: "★★★★★", 4: "★★★★☆", 3: "★★★☆☆", 2: "★★☆☆☆", 1: "★☆☆☆☆"}
 RANK_MULTIPLIERS = {"Z": 1.8, "S": 1.5, "A": 1.2, "B": 1.0, "E": 0.8}
 
-
 __all__ = [
     "SERIES", "ALL_CHARACTERS", "CHARACTERS", "SKILLS", "GEAR", "ITEMS",
     "PETS", "DUNGEONS", "BANNERS", "REGIONS", "ENEMIES", "RARITY_ICONS",
     "RANK_MULTIPLIERS",
 ]
-
-

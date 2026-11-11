@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import html
 import logging
-import random
 
 from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes
@@ -11,9 +10,24 @@ from .config import Settings
 from .database import Database
 from .data_catalog import ALL_CHARACTERS, BANNERS, CHARACTERS, SERIES, SKILLS
 from .game import (
-    GameError, battle_action, buy_asset, buy_shop_item, clan_create, clan_leave,
-    daily_reward, equip_skill, gacha_pull, learn_skill, market_page, portfolio,
-    profile, register_player, sell_asset, set_character, start_battle, use_item,
+    GameError,
+    battle_action,
+    buy_asset,
+    buy_shop_item,
+    clan_create,
+    clan_leave,
+    daily_reward,
+    equip_skill,
+    gacha_pull,
+    learn_skill,
+    market_page,
+    portfolio,
+    profile,
+    register_player,
+    sell_asset,
+    set_character,
+    start_battle,
+    use_item,
 )
 
 log = logging.getLogger(__name__)
@@ -26,7 +40,7 @@ COMMANDS = {
     "characters": "Browse the character catalog",
     "character": "Inspect a character",
     "team": "View owned fighters",
-    "equipchar": "Choose your active fighter",
+    "quipchar": "Choose your active fighter",
     "shop": "Buy items from the shop",
     "inventory": "Check your inventory",
     "skills": "View your skills",
@@ -42,6 +56,7 @@ COMMANDS = {
     "clan": "Check clan information",
     "clan_create": "Create a clan",
     "clan_leave": "Leave your clan",
+    "use": "Use a consumable item",
 }
 HELP = "🐉 Dragon Ball RPG\n\n" + "\n".join(f"/{k} — {v}" for k, v in COMMANDS.items()) + "\n\nAdmin: /add (ADMIN_IDS only). Battles are manual; choose every turn."
 
@@ -60,7 +75,7 @@ async def reply(update: Update, text: str, **kwargs):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     player = await ensure(update, context)
-    await reply(update, f"🐉 Dragon Ball RPG\nWelcome, {html.escape(player['display_name'])}! Start with /help.")
+    await reply(update, f"🐉 Dragon Ball RPG\nWelcome, {html.escape(player['display_name'])}! Type /help to begin.")
 
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -70,8 +85,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def profile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     p = await ensure(update, context)
-    fill = max(0, min(10, p["xp"] % 100 // 10))
-    bar = "█" * fill + "░" * (10 - fill)
+    bar = "█" * min(10, p["xp"] % 100 // 10) + "░" * (10 - min(10, p["xp"] % 100 // 10))
     await reply(
         update,
         f"👤 {html.escape(p['display_name'])} · ID {p['telegram_id']}\n"
@@ -128,33 +142,17 @@ async def team_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = context.application.bot_data["db"]
     con = await db.connect()
     try:
-        cur = await con.execute("SELECT character_id,level FROM owned_characters WHERE player_id=? ORDER BY character_id", (p["telegram_id"],))
+        cur = await con.execute("SELECT character_id, level FROM owned_characters WHERE player_id=? ORDER BY character_id", (p["telegram_id"],))
         owned = await cur.fetchall()
     finally:
         await con.close()
+
     if not owned:
         await reply(update, "No fighters owned yet.")
         return
+
     buttons = [[InlineKeyboardButton(f"{CHARACTERS.get(r['character_id'], {}).get('name', r['character_id'])} · Lv {r['level']}", callback_data=f"char:select:{r['character_id']}")] for r in owned]
     await reply(update, f"Active fighter: {html.escape(p['active_character'])}\nTap a fighter to equip:", reply_markup=InlineKeyboardMarkup(buttons))
-
-
-async def battle_start(update: Update, context: ContextTypes.DEFAULT_TYPE, kind: str):
-    await ensure(update, context)
-    battle = await start_battle(context.application.bot_data["db"], update.effective_user.id, kind)
-    await reply(update, battle_text(battle), parse_mode="HTML", reply_markup=battle_markup(battle["id"]))
-
-
-async def hunt_cmd(update, context):
-    await battle_start(update, context, "hunt")
-
-
-async def explore_cmd(update, context):
-    await battle_start(update, context, "explore")
-
-
-async def dungeon_cmd(update, context):
-    await battle_start(update, context, "dungeon")
 
 
 def bar(value: int, maximum: int) -> str:
@@ -180,6 +178,24 @@ def battle_markup(bid: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton(label, callback_data=f"battle:{bid}:{action}") for label, action in actions[i:i+2]] for i in range(0, len(actions), 2)])
 
 
+async def battle_start(update: Update, context: ContextTypes.DEFAULT_TYPE, kind: str):
+    await ensure(update, context)
+    battle = await start_battle(context.application.bot_data["db"], update.effective_user.id, kind)
+    await reply(update, battle_text(battle), parse_mode="HTML", reply_markup=battle_markup(battle["id"]))
+
+
+async def hunt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await battle_start(update, context, "hunt")
+
+
+async def explore_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await battle_start(update, context, "explore")
+
+
+async def dungeon_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await battle_start(update, context, "dungeon")
+
+
 async def market_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     p = await ensure(update, context)
     rows, page, pages = await market_page(context.application.bot_data["db"])
@@ -200,7 +216,7 @@ async def send_market(update, rows, page, pages, coins, query=None):
     if nav:
         buttons.append(nav)
     buttons.append([InlineKeyboardButton("💼 Portfolio", callback_data="market:portfolio")])
-    text = "\n".join(lines) + f"\n\nPage {page+1}/{pages}"
+    text = "\n".join(lines) + f"\n\nPage {page + 1}/{pages}"
     if query:
         await query.edit_message_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(buttons))
     else:
@@ -210,6 +226,22 @@ async def send_market(update, rows, page, pages, coins, query=None):
 async def portfolio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await ensure(update, context)
     await reply(update, await portfolio(context.application.bot_data["db"], update.effective_user.id), parse_mode="HTML")
+
+
+async def sell_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await ensure(update, context)
+    db = context.application.bot_data["db"]
+    con = await db.connect()
+    try:
+        cur = await con.execute("SELECT p.asset_id, p.quantity, a.name FROM market_positions p JOIN market_assets a ON a.asset_id = p.asset_id WHERE p.player_id=? AND p.quantity>0 ORDER BY a.name", (update.effective_user.id,))
+        rows = await cur.fetchall()
+    finally:
+        await con.close()
+    if not rows:
+        await reply(update, "Your exchange portfolio is empty.")
+        return
+    buttons = [[InlineKeyboardButton(f"Sell {r['name']} ×{r['quantity']}", callback_data=f"market:sell:{r['asset_id']}:1")] for r in rows]
+    await reply(update, "Choose an asset to sell:", reply_markup=InlineKeyboardMarkup(buttons))
 
 
 async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -281,32 +313,12 @@ async def pull_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await reply(update, f"🎉 New fighter: {result['reward']}. Banner: {result['banner']}")
 
 
-async def sell_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await ensure(update, context)
-    db = context.application.bot_data["db"]
-    con = await db.connect()
-    try:
-        cur = await con.execute("SELECT p.asset_id,p.quantity,a.name FROM market_positions p JOIN market_assets a ON a.asset_id=p.asset_id WHERE p.player_id=? AND p.quantity>0 ORDER BY a.name", (update.effective_user.id,))
-        rows = await cur.fetchall()
-    finally:
-        await con.close()
-    if not rows:
-        await reply(update, "Your exchange portfolio is empty.")
-        return
-    buttons = [[InlineKeyboardButton(f"Sell {r['name']} ×{r['quantity']}", callback_data=f"market:sell:{r['asset_id']}:1")] for r in rows]
-    await reply(update, "Choose one unit to sell:", reply_markup=InlineKeyboardMarkup(buttons))
-
-
 async def clan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await ensure(update, context)
     db = context.application.bot_data["db"]
     con = await db.connect()
     try:
-        cur = await con.execute(
-            "SELECT c.name, cm.role FROM clan_members cm JOIN clans c ON c.id = cm.clan_id WHERE cm.player_id=?",
-            (update.effective_user.id,),
-        )
-        row = await cur.fetchone()
+        row = await (await con.execute("SELECT c.name, cm.role FROM clan_members cm JOIN clans c ON c.id = cm.clan_id WHERE cm.player_id=?", (update.effective_user.id,))).fetchone()
     finally:
         await con.close()
     if not row:
@@ -330,7 +342,7 @@ async def clan_leave_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if result["leader_disbanded"]:
         await reply(update, f"💥 You were the leader, so clan {result['clan_name']} was disbanded.")
     else:
-        await reply(update, f"✅ You left clan {result['clan_name']}." )
+        await reply(update, f"✅ You left clan {result['clan_name']}.")
 
 
 async def use_item_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -350,6 +362,7 @@ async def market_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await ensure(update, context)
     parts = (q.data or "").split(":")
     db = context.application.bot_data["db"]
+
     if len(parts) == 3 and parts[1] == "page":
         rows, page, pages = await market_page(db, int(parts[2]))
         p = await profile(db, q.from_user.id)
@@ -382,14 +395,16 @@ async def battle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(parts) != 3:
         await q.edit_message_text("Invalid battle action.")
         return
+
     result = await battle_action(context.application.bot_data["db"], q.from_user.id, int(parts[1]), parts[2])
     if result["finished"]:
         await q.edit_message_text(result["text"])
         return
+
     con = await context.application.bot_data["db"].connect()
     try:
-        cur = await con.execute("SELECT * FROM active_battles WHERE id=? AND player_id=?", (int(parts[1]), q.from_user.id))
-        battle = dict(await cur.fetchone())
+        row = await (await con.execute("SELECT * FROM active_battles WHERE id=? AND player_id=?", (int(parts[1]), q.from_user.id))).fetchone()
+        battle = dict(row)
     finally:
         await con.close()
     await q.edit_message_text(f"You dealt {result['dealt']} · received {result['damage']} damage.\n\n{battle_text(battle)}", parse_mode="HTML", reply_markup=battle_markup(battle["id"]))
@@ -403,6 +418,7 @@ async def character_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if len(parts) != 3:
         await q.edit_message_text("Invalid selection.")
         return
+
     if parts[1] == "view":
         c = CHARACTERS.get(parts[2])
         if not c:
@@ -448,9 +464,6 @@ async def skill_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(parts) == 3 and parts[1] == "learn":
         result = await learn_skill(context.application.bot_data["db"], q.from_user.id, parts[2])
         await q.edit_message_text(f"✅ Learned {result['name']} for {result['cost']:,} Zeni.")
-    elif len(parts) == 4 and parts[1] == "equip":
-        result = await equip_skill(context.application.bot_data["db"], q.from_user.id, parts[2], int(parts[3]))
-        await q.edit_message_text(f"✅ {parts[2]} equipped to slot {result['slot']}.")
 
 
 async def gacha_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -508,17 +521,19 @@ async def post_init(application: Application):
 def build_application(settings: Settings, db: Database) -> Application:
     app = ApplicationBuilder().token(settings.bot_token).post_init(post_init).build()
     app.bot_data.update(settings=settings, db=db)
+
     handlers = [
         ("start", start), ("help", help_cmd), ("profile", profile_cmd), ("daily", daily_cmd),
         ("characters", characters_cmd), ("character", character_cmd), ("team", team_cmd), ("equipchar", team_cmd),
-        ("shop", shop_cmd), ("inventory", inventory_cmd), ("skills", skills_cmd), ("learn", learn_cmd), ("gacha", gacha_cmd), ("pull", pull_cmd),
-        ("hunt", hunt_cmd), ("explore", explore_cmd), ("dungeon", dungeon_cmd),
+        ("shop", shop_cmd), ("inventory", inventory_cmd), ("skills", skills_cmd), ("learn", learn_cmd),
+        ("gacha", gacha_cmd), ("pull", pull_cmd), ("hunt", hunt_cmd), ("explore", explore_cmd), ("dungeon", dungeon_cmd),
         ("market", market_cmd), ("portfolio", portfolio_cmd), ("sell", sell_cmd),
         ("clan", clan_cmd), ("clan_create", clan_create_cmd), ("clan_leave", clan_leave_cmd),
         ("use", use_item_cmd),
     ]
     for name, callback in handlers:
         app.add_handler(CommandHandler(name, callback))
+
     app.add_handler(CallbackQueryHandler(battle_callback, pattern=r"^battle:"))
     app.add_handler(CallbackQueryHandler(market_callback, pattern=r"^market:"))
     app.add_handler(CallbackQueryHandler(character_callback, pattern=r"^char:"))
@@ -532,5 +547,3 @@ def build_application(settings: Settings, db: Database) -> Application:
 
 
 __all__ = ["build_application", "COMMANDS", "HELP"]
-
-
