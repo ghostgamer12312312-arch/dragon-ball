@@ -1,6 +1,6 @@
 # Dragon Realm — Dragon Ball-inspired Telegram RPG
 
-A modular Python Telegram RPG with persistent SQLite player progression, PvE battles, fighter collection and summons, energy, daily rewards, quests, shop and inventory, clans, world raids, leaderboards, and admin moderation. It uses original text data only and is an unofficial fan project.
+A modular Python Telegram RPG with SQLite progression, PvE battles, fighter collection and summons, energy, daily rewards, quests, shop and inventory, clans, world raids, leaderboards, and admin moderation. Interactive hunt/explore/dungeon battles require a player-selected move each turn. The project uses text-only original game data and is an unofficial fan project.
 
 ## Run
 
@@ -17,23 +17,23 @@ python -m rpgbot.main
 
 Set `BOT_TOKEN`. `ADMIN_IDS` is an optional comma-separated list of numeric Telegram IDs. `DATABASE_PATH` defaults to `data/game.sqlite3`. In Telegram send `/start`, then `/help`.
 
-## Gameplay commands
+## Commands
 
-`/profile`, `/explore`, `/train`, `/rest`, `/daily`, `/quests`, `/claim`, `/summon`, `/collection`, `/select`, `/shop`, `/buy`, `/inventory`, `/use`, `/leaderboard`, `/clan`, `/clan_create`, `/clan_join`, `/clan_leave`, `/clan_disband`, `/raid`, `/raid_attack`.
+Core: `/start`, `/help`, `/profile`, `/hunt`, `/explore`, `/dungeon`, `/train`, `/rest`, `/daily`, `/quests`, `/claim`, `/summon`, `/collection`, `/select`, `/characters`, `/character`, `/shop`, `/buy`, `/inventory`, `/use`, `/leaderboard`, `/clan`, `/clan_create`, `/clan_join`, `/clan_leave`, `/clan_disband`, `/raid`, `/raid_attack`.
 
-Admin commands: `/admin_stats`, `/ban`, `/unban`. Admin IDs must be configured in `ADMIN_IDS`.
+Admin: `/admin_stats`, `/ban`, `/unban`, `/crown [heroes|npcs|boss|summons|map]`, `/upload <name>` (reply to a photo). Configure admin Telegram IDs using `ADMIN_IDS`.
 
-## Data and safety
+## Interactive battles and clan safety
 
-The database is created on first startup and stores player data persistently. Back up the database file with the bot stopped or use SQLite's online backup API. Never delete the database to update the game. Keep `.env` private, restrict access to the bot token, and run only one polling process for a token. SQLite transactions protect multi-step game operations. This is a playable foundation; review and test balance and deployment choices before inviting a large public player base.
+`/hunt`, `/explore`, and `/dungeon` create a persistent battle card with Attack, two MP-costing skills, Dodge, Transform, Switch, and Flee buttons. The enemy responds only after a player action; no auto-battle is used. Each player can have one active encounter. Battles cost 10 energy and grant documented rewards on victory. Clan members see a confirmation before leaving; leaders must transfer leadership or confirm disbandment. Admins can inspect missing art and store Telegram photo file IDs using `/crown` and `/upload`.
 
-## Development
+## Data and development
+
+SQLite creates the database and feature tables on startup. Back up the DB file while stopped or use SQLite's online backup API. Never delete player data to update the game. Keep `.env` private and run only one polling process per bot token.
 
 ```bash
 pip install pytest
 pytest -q
 ```
 
-## Scope
-
-This version implements a coherent playable core, not every feature listed in the source repositories. Advanced PvP, gear stat systems, fusion, dragon-ball wishes, seasonal events, clan vault/perks, richer raid rewards, and additional quest cycles are future work and are not represented as implemented commands.
+This is an expanded playable foundation, not a claim that every requested subsystem is implemented. This branch adds the interactive battle loop, clan-leave confirmation/leadership flow, auto-registration on command, dynamic art checklist/upload, and tap-to-inspect/equip owned fighters. Equipment stats and forging, player marketplace, gacha banners/pity, pets, Dragon Ball wishes, full five-series catalog, true multi-floor dungeons, and PvP remain future work and are not advertised as implemented. Artwork must be original or licensed.
