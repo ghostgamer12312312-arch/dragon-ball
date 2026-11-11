@@ -87,6 +87,61 @@ SKILLS = {
     "guardian": {"name": "Guardian Barrier", "power": 0, "mp_cost": 12, "cooldown": 3, "type": "Defense"},
 }
 
+"""Static, data-only catalogs used by the Telegram RPG interface."""
+
+SERIES = {
+    "Dragon Ball": {"icon": "🐉", "characters": ["goku", "vegeta", "piccolo", "gohan", "trunks", "broly", "beerus", "krillin", "yamcha"]},
+    "Naruto": {"icon": "🍥", "characters": ["naruto", "sasuke", "sakura", "kakashi", "gaara"]},
+    "One Piece": {"icon": "🏴‍☠️", "characters": ["luffy", "zoro", "sanji", "nami", "ace"]},
+    "Bleach": {"icon": "⚔️", "characters": ["ichigo", "byakuya", "renji", "rukia"]},
+    "Jujutsu Kaisen": {"icon": "💀", "characters": ["yuji", "megumi", "gojo", "nobara", "sukuna"]},
+}
+
+_DATA = [
+    ("goku", "Goku", "Dragon Ball", "Z", 5, "Ki", "Determined", "Kamehameha", 120, 22),
+    ("vegeta", "Vegeta", "Dragon Ball", "Z", 5, "Ki", "Pride", "Galick Gun", 115, 24),
+    ("piccolo", "Piccolo", "Dragon Ball", "S", 4, "Ki", "Guardian", "Special Beam Cannon", 135, 20),
+    ("gohan", "Gohan", "Dragon Ball", "S", 4, "Ki", "Potential", "Masenko", 130, 21),
+    ("trunks", "Future Trunks", "Dragon Ball", "S", 4, "Ki", "Brave", "Burning Attack", 125, 22),
+    ("broly", "Broly", "Dragon Ball", "S", 4, "Ki", "Rage", "Gigantic Burst", 180, 30),
+    ("beerus", "Beerus", "Dragon Ball", "Z", 5, "Destruction", "Divine", "Hakai", 165, 34),
+    ("krillin", "Krillin", "Dragon Ball", "A", 3, "Ki", "Clever", "Destructo Disc", 95, 14),
+    ("yamcha", "Yamcha", "Dragon Ball", "B", 2, "Ki", "Courage", "Wolf Fang Fist", 100, 13),
+    ("naruto", "Naruto Uzumaki", "Naruto", "Z", 5, "Wind", "Determined", "Rasengan", 135, 24),
+    ("sasuke", "Sasuke Uchiha", "Naruto", "Z", 5, "Lightning", "Focused", "Chidori", 125, 25),
+    ("sakura", "Sakura Haruno", "Naruto", "A", 3, "Medical", "Strong", "Chakra Punch", 130, 18),
+    ("kakashi", "Kakashi Hatake", "Naruto", "S", 4, "Lightning", "Strategist", "Raikiri", 125, 23),
+    ("gaara", "Gaara", "Naruto", "S", 4, "Sand", "Calm", "Sand Coffin", 145, 21),
+    ("luffy", "Monkey D. Luffy", "One Piece", "Z", 5, "Rubber", "Brave", "Gum-Gum Pistol", 145, 25),
+    ("zoro", "Roronoa Zoro", "One Piece", "Z", 5, "Steel", "Relentless", "Three-Sword Style", 150, 26),
+    ("sanji", "Sanji", "One Piece", "S", 4, "Fire", "Gallant", "Diable Jambe", 125, 23),
+    ("nami", "Nami", "One Piece", "A", 3, "Weather", "Inventive", "Thunder Tempo", 100, 18),
+    ("ace", "Portgas D. Ace", "One Piece", "S", 4, "Fire", "Loyal", "Flame Emperor", 130, 25),
+    ("ichigo", "Ichigo Kurosaki", "Bleach", "Z", 5, "Reiatsu", "Fierce", "Getsuga Tensho", 145, 27),
+    ("byakuya", "Byakuya Kuchiki", "Bleach", "S", 4, "Petal", "Disciplined", "Senbonzakura", 130, 23),
+    ("renji", "Renji Abarai", "Bleach", "A", 3, "Reiatsu", "Loyal", "Zabimaru", 125, 21),
+    ("rukia", "Rukia Kuchiki", "Bleach", "S", 4, "Ice", "Composed", "Sode no Shirayuki", 120, 22),
+    ("yuji", "Yuji Itadori", "Jujutsu Kaisen", "Z", 5, "Cursed Energy", "Brave", "Divergent Fist", 140, 25),
+    ("megumi", "Megumi Fushiguro", "Jujutsu Kaisen", "S", 4, "Shadow", "Thoughtful", "Ten Shadows", 125, 23),
+    ("gojo", "Satoru Gojo", "Jujutsu Kaisen", "Z", 5, "Limitless", "Confident", "Limitless Void", 150, 30),
+    ("nobara", "Nobara Kugisaki", "Jujutsu Kaisen", "A", 3, "Cursed Energy", "Bold", "Resonance", 115, 21),
+    ("sukuna", "Ryomen Sukuna", "Jujutsu Kaisen", "Z", 5, "Cursed Energy", "Fearsome", "Cleave", 160, 32),
+]
+ALL_CHARACTERS = [dict(id=i, name=n, series=s, rank=r, rarity=q, element=e, trait=t, ability=a, hp=h, attack=atk) for i, n, s, r, q, e, t, a, h, atk in _DATA]
+CHARACTERS = {c["id"]: c for c in ALL_CHARACTERS}
+
+SKILLS = {
+    "ki_blast": {"name": "Ki Blast", "power": 32, "mp_cost": 10, "cooldown": 1, "type": "Energy"},
+    "kamehameha": {"name": "Kamehameha", "power": 68, "mp_cost": 20, "cooldown": 2, "type": "Blast"},
+    "guardian_barrier": {"name": "Guardian Barrier", "power": 0, "mp_cost": 14, "cooldown": 3, "type": "Defense"},
+    "spirit_burst": {"name": "Spirit Burst", "power": 55, "mp_cost": 18, "cooldown": 2, "type": "Energy"},
+    "rasengan": {"name": "Rasengan", "power": 60, "mp_cost": 20, "cooldown": 2, "type": "Ninja"},
+    "chidori": {"name": "Chidori", "power": 72, "mp_cost": 26, "cooldown": 3, "type": "Lightning"},
+    "gum_gum_pistol": {"name": "Gum-Gum Pistol", "power": 64, "mp_cost": 22, "cooldown": 2, "type": "Striker"},
+    "getsuga_tensho": {"name": "Getsuga Tensho", "power": 78, "mp_cost": 28, "cooldown": 3, "type": "Slash"},
+    "cursed_reversal": {"name": "Cursed Reversal", "power": 58, "mp_cost": 18, "cooldown": 2, "type": "Barrier"},
+    "healing_wave": {"name": "Healing Wave", "power": 0, "mp_cost": 14, "cooldown": 2, "type": "Support"},
+}
 GEAR = {
     "saiyan_band": {"name": "Saiyan Band", "slot": "ring", "attack": 6, "defense": 2, "rarity": "Rare"},
     "shadow_armor": {"name": "Shadow Armor", "slot": "armor", "attack": 3, "defense": 12, "rarity": "Epic"},
@@ -107,6 +162,22 @@ PETS = {
     "phoenix_kit": {"name": "Phoenix Kit", "rarity": "Legendary", "bonus": "+10% crit", "cost": 600},
 }
 
+    "village_scroll": {"name": "Village Scroll", "slot": "accessory", "attack": 5, "defense": 5, "rarity": "Rare"},
+    "soul_robe": {"name": "Soul Robe", "slot": "armor", "attack": 4, "defense": 10, "rarity": "Epic"},
+}
+ITEMS = {
+    "senzu": {"name": "Senzu Bean", "category": "consumable", "price": 40, "effect": "energy", "amount": 40, "description": "Restore 40 energy."},
+    "ki_potion": {"name": "Ki Potion", "category": "consumable", "price": 60, "effect": "energy", "amount": 55, "description": "Restore 55 energy."},
+    "exp_pill": {"name": "EXP Pill", "category": "consumable", "price": 35, "effect": "xp", "amount": 40, "description": "Gain 40 XP."},
+    "coin_bag": {"name": "Coin Bag", "category": "consumable", "price": 80, "effect": "coins", "amount": 150, "description": "Gain 150 Zeni."},
+    "stat_orb": {"name": "Stat Orb", "category": "consumable", "price": 90, "effect": "stats", "amount": 2, "description": "Add 2 stat points."},
+    "enhance_stone": {"name": "Enhancement Stone", "category": "material", "price": 25, "effect": "material", "amount": 1, "description": "A stone used to enhance equipment."},
+}
+PETS = {
+    "fox_pup": {"name": "Fox Pup", "rarity": "Rare", "bonus": "+5% attack", "cost": 120},
+    "dragon_turtle": {"name": "Dragon Turtle", "rarity": "Epic", "bonus": "+8% defense", "cost": 240},
+    "phoenix_kit": {"name": "Phoenix Kit", "rarity": "Legendary", "bonus": "+10% critical chance", "cost": 600},
+}
 DUNGEONS = {
     "forest": {"name": "Whispering Forest", "difficulty": "Normal", "reward": 150},
     "ruins": {"name": "Ancient Ruins", "difficulty": "Hard", "reward": 300},
@@ -147,3 +218,25 @@ def resolve_skill(name: str) -> dict[str, Any] | None:
         if skill_name == name or skill["name"].lower() == name:
             return skill
     return None
+BANNERS = {
+    "starter": {"name": "Starter Banner", "cost": 50, "featured": ["goku", "vegeta", "krillin"]},
+    "legend": {"name": "Legend Banner", "cost": 120, "featured": ["broly", "beerus", "gojo"]},
+    "mythic": {"name": "Mythic Banner", "cost": 200, "featured": ["sukuna", "luffy", "naruto"]},
+}
+REGIONS = {"earth": {"name": "Earth", "weather": "Clear"}, "namek": {"name": "Namek", "weather": "Mist"}, "other_world": {"name": "Other World", "weather": "Starlight"}}
+ENEMIES = [
+    {"name": "Saibaman", "hp": 60, "attack": 10},
+    {"name": "Frieza Force Scout", "hp": 85, "attack": 13},
+    {"name": "Android Prototype", "hp": 110, "attack": 16},
+    {"name": "Galactic Raider", "hp": 140, "attack": 19},
+    {"name": "Shadow Ninja", "hp": 165, "attack": 23},
+    {"name": "Soul Reaper", "hp": 190, "attack": 26},
+]
+RARITY_ICONS = {5: "★★★★★", 4: "★★★★☆", 3: "★★★☆☆", 2: "★★☆☆☆", 1: "★☆☆☆☆"}
+RANK_MULTIPLIERS = {"Z": 1.8, "S": 1.5, "A": 1.2, "B": 1.0, "E": 0.8}
+
+__all__ = [
+    "SERIES", "ALL_CHARACTERS", "CHARACTERS", "SKILLS", "GEAR", "ITEMS",
+    "PETS", "DUNGEONS", "BANNERS", "REGIONS", "ENEMIES", "RARITY_ICONS",
+    "RANK_MULTIPLIERS",
+]
