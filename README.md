@@ -1,6 +1,6 @@
 # Dragon Ball RPG — Capsule Corp. Exchange
 
-A small modular Python Telegram RPG starting point with async SQLite persistence and a Dragon Ball-themed player market. The exchange has 20 fictional assets, inline-button buy/sell flows, a portfolio, bounded price movement, stock, and transaction fees. Prices update on five-minute market cycles. This is fictional in-game trading; Zeni is not real money and profits are not guaranteed.
+A modular Python Telegram RPG with async SQLite persistence and a Dragon Ball-themed player exchange. It includes a persistent catalog-addition/admin tool so authorized admins can add game content without editing code or executing arbitrary scripts.
 
 ## Run
 
@@ -11,23 +11,23 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
 pip install -r requirements.txt
 cp .env.example .env
-# Set BOT_TOKEN in .env; never commit or share the token
+# Set BOT_TOKEN and your numeric Telegram ID in ADMIN_IDS. Never commit the token.
 python -m rpgbot.runner
 ```
 
-Optional settings: `ADMIN_IDS` (comma-separated Telegram numeric IDs), `DATABASE_PATH` (default `data/game.sqlite3`), and `LOG_LEVEL`.
-
 ## Commands
 
-- `/start` — register/update your fighter profile
-- `/profile` — view level and Zeni balance
-- `/market` — browse 20 Capsule Corp. Exchange assets and buy/sell from inline buttons
-- `/portfolio` — view holdings, market value, cost basis, and unrealized P/L
-- `/help` — command guide
+- `/start`, `/help`, `/profile`
+- `/market`, `/portfolio` — browse and trade 20 fictional Dragon Ball assets
+- `/add` — admin-only game content manager. Tap a category, then use the shown schema.
+- `/add list [type]` — list dynamic records stored in the database.
+- `/add coins USER_ID AMOUNT`, `/add gems USER_ID AMOUNT`
+- `/add item USER_ID ITEM_ID QUANTITY`
+- `/add character USER_ID CHARACTER_ID`
 
-Trading uses Zeni, charges a disclosed 1% fee, validates price, stock, funds and holdings, and writes balances/positions/transactions atomically. Market quotes move up or down deterministically per five-minute market cycle, remain bounded by each asset's published floor and ceiling, and stock refreshes daily. Market value and realized/unrealized returns can decline; this is game entertainment and not financial advice.
+Supported data categories: item, character, skill, enemy, pet, region, gear, recipe, banner, and title. Example: `/add item senzu|Senzu Bean|Restore energy|40|energy|40`. The command validates types and ranges, upserts records in SQLite, and writes grants to an audit log. Content is stored as data only; it is never evaluated as Python or SQL. Existing game catalogs are not automatically overridden by custom content unless a feature explicitly loads those records.
 
-The repository is a developing RPG foundation, not a claim that every feature from other prototypes is implemented. Use original or licensed artwork only. Keep `.env` secret and run one polling process per bot token.
+Market quotes update every five minutes within catalog bounds, stock refreshes daily, and buy/sell uses atomic transactions and a disclosed 1% fee. Trading is fictional in-game entertainment; value may rise or fall and profit is not guaranteed.
 
 ## Tests
 
@@ -35,3 +35,5 @@ The repository is a developing RPG foundation, not a claim that every feature fr
 pip install -r requirements-dev.txt
 python -m unittest discover -s tests
 ```
+
+Keep `.env` private and run one polling process per bot token. Use original or licensed artwork only.
