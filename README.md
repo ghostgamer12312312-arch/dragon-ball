@@ -1,6 +1,6 @@
 # Dragon Realm — Dragon Ball-inspired Telegram RPG
 
-A modular Python Telegram RPG with SQLite progression, PvE battles, fighter collection and summons, energy, daily rewards, quests, shop and inventory, clans, world raids, leaderboards, and admin moderation. Interactive hunt/explore/dungeon battles require a player-selected move each turn. The project uses text-only original game data and is an unofficial fan project.
+A modular Python Telegram RPG with persistent SQLite progression, PvE battles, fighter collection and summons, energy, daily rewards, quests, shop and inventory, clans, world raids, leaderboards, admin moderation, and a Dragon Ball-themed player exchange. Interactive hunt/explore/dungeon battles require a player-selected move each turn. The project uses text-only original game data and is an unofficial fan project.
 
 ## Run
 
@@ -19,13 +19,17 @@ Set `BOT_TOKEN`. `ADMIN_IDS` is an optional comma-separated list of numeric Tele
 
 ## Commands
 
-Core: `/start`, `/help`, `/profile`, `/hunt`, `/explore`, `/dungeon`, `/train`, `/rest`, `/daily`, `/quests`, `/claim`, `/summon`, `/collection`, `/select`, `/characters`, `/character`, `/shop`, `/buy`, `/inventory`, `/use`, `/leaderboard`, `/clan`, `/clan_create`, `/clan_join`, `/clan_leave`, `/clan_disband`, `/raid`, `/raid_attack`.
+Core: `/start`, `/help`, `/profile`, `/hunt`, `/explore`, `/dungeon`, `/train`, `/rest`, `/daily`, `/quests`, `/claim`, `/summon`, `/collection`, `/select`, `/characters`, `/character`, `/shop`, `/buy`, `/inventory`, `/use`, `/leaderboard`, `/clan`, `/clan_create`, `/clan_join`, `/clan_leave`, `/clan_disband`, `/raid`, `/raid_attack`, `/market`, `/portfolio`.
 
 Admin: `/admin_stats`, `/ban`, `/unban`, `/crown [heroes|npcs|boss|summons|map]`, `/upload <name>` (reply to a photo). Configure admin Telegram IDs using `ADMIN_IDS`.
 
+## Capsule Corp. Exchange
+
+Use `/market` to browse 20 Dragon Ball-themed tradeable assets, tap an asset, and buy or sell units with inline buttons. `/portfolio` shows holdings, current value, purchase basis, and unrealized profit/loss. Prices change deterministically every five minutes, stay within catalog limits, and use a daily supply reset. Transactions use Zeni (the game's coin balance), charge a disclosed 1% fee, validate funds/holdings/supply, and update balances and positions atomically. Quotes can move up or down; returns are not guaranteed. This is fictional in-game trading only, not real-money financial advice or a real securities market.
+
 ## Interactive battles and clan safety
 
-`/hunt`, `/explore`, and `/dungeon` create a persistent battle card with Attack, two MP-costing skills, Dodge, Transform, Switch, and Flee buttons. The enemy responds only after a player action; no auto-battle is used. Each player can have one active encounter. Battles cost 10 energy and grant documented rewards on victory. Clan members see a confirmation before leaving; leaders must transfer leadership or confirm disbandment. Admins can inspect missing art and store Telegram photo file IDs using `/crown` and `/upload`.
+`/hunt`, `/explore`, and `/dungeon` create a persistent battle card with Attack, two MP-costing skills, Dodge, Transform, Switch, and Flee buttons. The enemy responds only after a player action; no auto-battle is used. Each player can have one active encounter. Battles cost 10 energy and grant documented rewards on victory. Clan members see confirmation before leaving; leaders must transfer leadership or confirm disbandment. Admins can inspect missing art and store Telegram photo file IDs using `/crown` and `/upload`.
 
 ## Data and development
 
@@ -36,4 +40,4 @@ pip install pytest
 pytest -q
 ```
 
-This is an expanded playable foundation, not a claim that every requested subsystem is implemented. This branch adds the interactive battle loop, clan-leave confirmation/leadership flow, auto-registration on command, dynamic art checklist/upload, and tap-to-inspect/equip owned fighters. Equipment stats and forging, player marketplace, gacha banners/pity, pets, Dragon Ball wishes, full five-series catalog, true multi-floor dungeons, and PvP remain future work and are not advertised as implemented. Artwork must be original or licensed.
+This is an expanded playable foundation, not a claim that every requested subsystem is implemented. Full PvP, gear stats/forge, auction listings, pets, wishes, five-series callback browsing, multi-floor dungeons, and clan treasury raid rewards remain future work and are not represented as working features. Artwork must be original or licensed.
