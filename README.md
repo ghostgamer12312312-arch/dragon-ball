@@ -1,6 +1,6 @@
 # Dragon Ball RPG — Capsule Corp. Exchange
 
-A modular Python Telegram RPG with async SQLite persistence and a Dragon Ball-themed player exchange. It includes a persistent catalog-addition/admin tool so authorized admins can add game content without editing code or executing arbitrary scripts.
+A modular Python Telegram RPG with async SQLite persistence and a Dragon Ball-themed player exchange. Admins can safely expand the game catalog and grant player resources through `/add`.
 
 ## Run
 
@@ -18,16 +18,26 @@ python -m rpgbot.runner
 ## Commands
 
 - `/start`, `/help`, `/profile`
-- `/market`, `/portfolio` — browse and trade 20 fictional Dragon Ball assets
-- `/add` — admin-only game content manager. Tap a category, then use the shown schema.
-- `/add list [type]` — list dynamic records stored in the database.
-- `/add coins USER_ID AMOUNT`, `/add gems USER_ID AMOUNT`
-- `/add item USER_ID ITEM_ID QUANTITY`
-- `/add character USER_ID CHARACTER_ID`
+- `/market`, `/portfolio` — browse and trade fictional Dragon Ball-themed assets
+- `/add` — admin-only game manager with tap-to-select content categories
+- `/add list [type]` — list persisted admin-created data
+- `/add coins|gems|energy|xp|level USER_ID AMOUNT` — bounded admin grants
+- `/add item|gear|character|skill|pet USER_ID CONTENT_ID QUANTITY` — grant owned game assets
+- `/add dragonball USER_ID STAR QUANTITY` — grant Dragon Balls (star 1–7)
 
-Supported data categories: item, character, skill, enemy, pet, region, gear, recipe, banner, and title. Example: `/add item senzu|Senzu Bean|Restore energy|40|energy|40`. The command validates types and ranges, upserts records in SQLite, and writes grants to an audit log. Content is stored as data only; it is never evaluated as Python or SQL. Existing game catalogs are not automatically overridden by custom content unless a feature explicitly loads those records.
+Supported persistent content types: `item`, `character`, `skill`, `enemy`, `pet`, `region`, `gear`, `recipe`, `banner`, `title`, `boss`, `quest`, `dungeon`, `market_asset`, and `custom`. `/add` validates fields, uses allowlisted schemas, performs grants in database transactions, and audits admin changes. Custom content is stored as JSON data; it is never interpreted as Python, SQL, or executable code. Dynamic records are safely stored and listable, but do not automatically alter hard-coded combat or market behavior unless a later game feature explicitly loads that record type.
 
-Market quotes update every five minutes within catalog bounds, stock refreshes daily, and buy/sell uses atomic transactions and a disclosed 1% fee. Trading is fictional in-game entertainment; value may rise or fall and profit is not guaranteed.
+Examples:
+
+```text
+/add coins 123456789 5000
+/add character 123456789 goku 1
+/add dragonball 123456789 4 1
+/add item senzu|Senzu Bean|Restores energy|40|energy|40
+/add custom capsule|material|Capsule|A useful item|{"rarity":"rare"}
+```
+
+Market quotes update every five minutes within catalog bounds, stock refreshes daily, and buy/sell uses atomic transactions and a disclosed 1% fee. Trading is fictional in-game entertainment; value can rise or fall.
 
 ## Tests
 
